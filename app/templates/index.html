@@ -1,23 +1,65 @@
 {% extends 'base.html' %}
+{% block title %}Welcome{% endblock %}
+
 {% block content %}
-  <div class="text-center py-5">
-    <h1 class="mb-3">Welcome to PhishGuard</h1>
-    <p class="lead">
-      Welcome To PhishGuard, your trusted ally in the fight against phishing attacks. 
-      ED2 Group 7!
-    </p>
-
-    <!-- Logo -->
-    <img
-      src="{{ url_for('static', filename='img/phishguard-logo.png') }}"
-      alt="PhishGuard"
-      class="img-fluid my-3"
-      style="max-width: 420px;"
-    />
-
-    <div class="mt-4">
-      <a class="btn btn-primary btn-lg" href="{{ url_for('auth.register') }}">Create an account</a>
-      <a class="btn btn-outline-secondary btn-lg" href="{{ url_for('auth.login') }}">Log in</a>
+<div class="container">
+    <!-- Hero Section -->
+    <div class="row align-items-center py-5">
+        <div class="col-lg-6 text-center text-lg-start">
+            <h1 class="display-4 fw-bold mb-3">Protect Yourself from Phishing Attacks</h1>
+            <p class="lead text-muted mb-4">
+                PhishGuard uses advanced AI to detect and prevent phishing attempts in real-time. 
+                Stay safe while browsing with our powerful Chrome extension.
+            </p>
+            <div class="d-grid gap-3 d-sm-flex">
+                <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-4">
+                    <i class="fas fa-shield-alt me-2"></i>Get Started
+                </a>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-lg px-4">
+                    <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-6 text-center mt-5 mt-lg-0">
+            <img src="{{ url_for('static', filename='img/phishguard-logo.png') }}"
+                 alt="PhishGuard"
+                 class="img-fluid rounded-3 shadow-lg"
+                 style="max-width: 420px;">
+        </div>
     </div>
-  </div>
+
+    <!-- Features Section -->
+    <div class="row py-5">
+        <div class="col-12 text-center mb-5">
+            <h2 class="fw-bold">Why Choose PhishGuard?</h2>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0 p-4">
+                <div class="text-center mb-3">
+                    <i class="fas fa-robot fa-3x text-primary"></i>
+                </div>
+                <h4 class="text-center mb-3">AI-Powered Detection</h4>
+                <p class="text-muted">Advanced machine learning algorithms to identify sophisticated phishing attempts.</p>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0 p-4">
+                <div class="text-center mb-3">
+                    <i class="fas fa-bolt fa-3x text-primary"></i>
+                </div>
+                <h4 class="text-center mb-3">Real-time Protection</h4>
+                <p class="text-muted">Instant scanning and alerts to protect you while browsing the web.</p>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0 p-4">
+                <div class="text-center mb-3">
+                    <i class="fas fa-chart-line fa-3x text-primary"></i>
+                </div>
+                <h4 class="text-center mb-3">Detailed Analytics</h4>
+                <p class="text-muted">Comprehensive reports and insights about detected threats.</p>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

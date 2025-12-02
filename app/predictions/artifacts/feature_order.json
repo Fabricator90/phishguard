@@ -1,0 +1,14 @@
+﻿[
+  "url_length",
+  "dot_count",
+  "hyphen_count",
+  "at_symbol_present",
+  "has_ip_address",
+  "is_asset_url",
+  "num_subdomains",
+  "is_trusted_tld",
+  "num_iframes",
+  "num_password_inputs",
+  "num_js_redirects",
+  "TLD_freq"
+]

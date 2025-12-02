@@ -1,135 +1,163 @@
-# PhishGuard
+﻿PhishGuard
 
-Flask backend + Chrome MV3 extension for reporting suspicious URLs and (soon) checking risk scores via a phishing ML model.
+Flask API + Chrome MV3 extension for real-time phishing risk detection.
+The extension sends page/link URLs; the API serves a trained model and returns a label + score.
 
----
 
-## Project Recap (Current State)
+Files for the Extension
+Google Drive (packaged assets):
+https://drive.google.com/drive/folders/1yR-pS1MigUfD7Lxv-qdisMeh9a8LW1GN?usp=drive_link
 
-**Backend (Flask)**
-- App factory pattern (`app/__init__.py`), blueprints for web/auth/API.
-- JWT-protected REST API at `/api/*`.
-- Email confirmation enforced in **prod**; bypassed in **dev** when `FLASK_DEBUG=1`.
-- Database models: `User`, `Report(user_id, url, source, created_at)`.
-- Deployed on **Render** with a custom domain: **https://www.phishguard.shop**.
-- Prod DB: **Render Postgres** (External DB URL set in env).
 
-**Chrome Extension (MV3)**
-- Popup supports: **Login**, **/api/me**, **Report current page**, **Recent reports**.
-- Points to **local** or **prod** via `config.js`:
-  - Dev: `const CONFIG = { API_BASE: "http://127.0.0.1:5000" };`
-  - Prod: `const CONFIG = { API_BASE: "https://www.phishguard.shop" };`
 
-**What’s Live (Endpoints)**
-- `POST /api/login` → `{ access_token, refresh_token }`
-- `POST /api/refresh` (refresh JWT)
-- `GET  /api/me` (access JWT)
-- `POST /api/report` (access JWT) → store a URL
-- `GET  /api/reports` (access JWT) → latest reports (up to 50)
-- `POST /api/check` → **stub** `{ url, score: 0.5, label: "unknown" }`
-- `GET  /api/health` → `{ ok: true }`
 
----
 
-## Quickstart (Dev on Windows PowerShell)
 
-```powershell
-# From project root
+
+
+
+
+What’s inside
+Backend: Flask (app factory), JWT auth, Alembic/Flask-Migrate, SQLAlchemy (Postgres/SQLite)
+Model serving: phish_rf.joblib + imputer_phi.joblib (tracked with Git LFS)
+Features: 12 features w/ NaN-safe imputation, HTTPS/TLD heuristics
+Data: /api/report persists reports for the dashboard
+Dashboard: Revamped templates/base.html, templates/dashboard.html, and templates/index.html
+Deploy: Render (Web Service + Postgres). Portable Git-LFS during build.
+
+
+
+Quick start (Windows, PowerShell)
+# 1) Clone & enter
+git clone https://github.com/<your-username>/phishguard.git
+cd phishguard
+
+# 2) Create venv & install deps
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
-# Local env
-copy .env.example .env
-# Edit .env (SECRET_KEY, JWT_SECRET_KEY, SQLALCHEMY_DATABASE_URI=sqlite:///phishguard.sqlite3, Mailtrap if needed)
+# 3) (First time) pull model artifacts via Git LFS
+git lfs install
+git lfs pull
 
-# DB
+# 4) Create .env (see below), then initialize DB
+python -m flask --app wsgi.py db upgrade
+
+# 5) Run the API (dev)
+python -m flask --app wsgi.py run --debug --port 5000
+
+
+
+
+Alternative run command (same result):
 $env:FLASK_APP="wsgi.py"
-flask db upgrade
-
-# Run (dev; bypasses email confirm)
-$env:FLASK_DEBUG="1"
-flask run
+flask run --reload --port 5000
 
 
 
+.env (minimal for local dev)
+# Flask
+FLASK_ENV=development
+FLASK_DEBUG=1
+SECRET_KEY=change-me
 
-Chrome Extension (Dev)
-----------------------
-    
-*   Load unpacked at chrome://extensions, then **Reload**.
-> **CORS note:** Unpacked extensions have different IDs per machine. In prod, allowlist the **published** extension ID. For dev on multiple machines, you can temporarily allow chrome-extension://\* via a regex in CORS.
+# Database (SQLite for local)
+SQLALCHEMY_DATABASE_URI=sqlite:///phishguard.sqlite3
 
+# Model behavior
+PHISH_THRESHOLD=0.90
+PHISH_NAN_DEFAULT=0.5
 
+# JWT for /api
+JWT_SECRET_KEY=change-me-too
 
+# Email (Mailtrap or disable)
+MAIL_SERVER=live.smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USE_TLS=true
+MAIL_USERNAME=smtp@mailtrap.io
+MAIL_PASSWORD=<your-mailtrap-password>
+MAIL_DEFAULT_SENDER="PhishGuard <noreply@phishguard.shop>"
+MAIL_SUPPRESS_SEND=false
 
-
-Deploy (Render)
----------------
-
-*   Service is connected to this repo/branch.
-*   **Environment variables (prod)**
-    *   SECRET\_KEY, JWT\_SECRET\_KEY → strong randoms
-    *   SQLALCHEMY\_DATABASE\_URI → External Postgres URL
-    *   Mailtrap SMTP vars (for confirm flow if/when enabled)
-    *   **Do not** set FLASK\_DEBUG in prod
-        
-*   Start command: gunicorn wsgi:app
-
-
-
-
-
-Data & Storage
---------------
-
-*   **Dev**: SQLite (phishguard.sqlite3) as configured in .env.
-*   **Prod**: Render Postgres (External DB URL).
-*   All POST /api/report writes go to the DB of the environment you’re calling.
-    
-*   **Do not** store ML models or datasets in Postgres (size limits). Use:
-    *   Repo (if the model is small), or
-    *   Object storage (S3/Backblaze) and download/cache at startup, or
-    *   Render persistent disk (paid).
-        
+# Tokens for email flows
+SECURITY_EMAIL_SALT=confirm-salt-CHANGE-ME
+SECURITY_RESET_SALT=reset-salt-CHANGE-ME
+TOKEN_MAX_AGE=86400
 
 
 
-ML Model (Random Forest) — Planned
-----------------------------------
-
-*   /api/check is currently a **stub**.
-*   Team is sourcing phishing datasets and will train an RF model.
-*   Inference plan:
-    
-    *   Load phish\_rf.joblib at startup (or on first request).
-    *   Extract features from URL/context.
-    *   predict\_proba → return { score, label }.
-        
-
-**Note on size limits:** Keep datasets out of the repo/DB; store the model artifact as a file (not in Postgres). If report volume grows, consider pruning/archiving or upgrading the DB.
+Chrome Extension (dev)
+Open chrome://extensions, enable Developer mode.
+Load unpacked → select phishguard_chrome_extension_v2/.
+Edit phishguard_chrome_extension_v2/config.js:
+// For local dev:
+const CONFIG = { API_BASE: "http://127.0.0.1:5000" };
+// For prod:
+// const CONFIG = { API_BASE: "https://www.phishguard.shop" };
+Open the popup → Log in → “Scan this page”.
 
 
 
+REST API (quick)
+Auth
+POST /api/login → { access_token, refresh_token }
+POST /api/refresh → { access_token }
+GET /api/me (Bearer)
 
 
-What’s Next
------------
+Scoring
+POST /api/check → { url, label, score }
+GET /api/health → model/meta diagnostics
 
-*   **Email Confirm Flow**: add /api/resend-confirm and /api/confirm/ (Mailtrap) and keep confirm enforced in prod.
-*   **Extension UX**: context menu “Report this page” + badge (✓/!).
-*   **Reports API**: accept ?limit=5 to reduce payload for the popup.
-*   **Model Integration**: real feature extractor + RF model in /api/check.
-*   **Hardening**: rate limiting on /api/\*, keep CORS allowlist tight in prod.
-*   **Dashboard**: admin/reporter view.
+Reports
+POST /api/report (persist one)
+GET /api/reports?limit=50
 
 
 
+Deploy on Render
+Build Command
+bash scripts/render-build.sh
+(Downloads portable Git-LFS, runs git lfs pull, then pip install -r requirements.txt.)
+Start Command
+PYTHONPATH=. FLASK_APP=wsgi.py python -m flask db upgrade && \
+python -m gunicorn --preload -w 1 -k gthread --threads 4 --timeout 120 -b 0.0.0.0:$PORT wsgi:app
+
+
+
+Key environment variables (prod)
+SECRET_KEY
+JWT_SECRET_KEY
+SQLALCHEMY_DATABASE_URI (Postgres), e.g.
+postgresql+psycopg://<user>:<pass>@<host>/<db>?sslmode=require
+MAIL_* (if you want registration/reset emails)
+SECURITY_EMAIL_SALT, SECURITY_RESET_SALT, TOKEN_MAX_AGE
+PHISH_THRESHOLD (prod default is often 0.85)
+PHISH_NAN_DEFAULT=0.5
+
+
+Models not loading → ensure git lfs pull fetched .joblib files.
+DB URL errors → use the postgresql+psycopg:// driver prefix.
+Migration errors → run python -m flask --app wsgi.py db upgrade.
+Emails fail → confirm MAIL_* settings and Mailtrap domain verification; set MAIL_SUPPRESS_SEND=true to disable sending in dev.
+
+
+
+Changelog (Oct 2025)
+Revamped UI templates: base.html, dashboard.html, index.html
+Hardened email flows (confirmation + reset) using salts and timed tokens
+Widened users.password_hash to 255 (Alembic migration)
+Render build now uses portable Git-LFS; Start command runs DB migrations automatically
+
+
+Commit & push to GitHub
+# From repo root
+git add -A
+git commit -m "docs: update README with local run steps and deploy notes"
+git push origin main.
 
 
 License
--------
-
-MIT
-
-::contentReference\[oaicite:0\]{index=0}
+MIT (see LICENSE)

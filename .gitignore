@@ -1,52 +1,72 @@
-# Python
+# ---- Secrets / env ----
+.env
+.env.*
+!.env.example
+.env.bak
+
+# ---- Python cache/build ----
 __pycache__/
 *.py[cod]
-*.sqlite3
-.env
+*.pyo
+*.pyd
+*.so
+*.egg*
+.eggs/
+dist/
+build/
+*.spec
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.tox/
+
+# ---- Virtual envs ----
 .venv/
 venv/
 env/
-.mypy_cache/
-.pytest_cache/
 
-# Flask
-instance/
-.migrations/
-
-# VSCode
-.vscode/
-
-# OS
+# ---- OS / Editor ----
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
 
-.env
-.venv/
-__pycache__/
-*.sqlite3
+# ---- Flask local DB / instance data ----
 instance/
+*.sqlite
+*.sqlite3
 
-.env
-.venv/
-__pycache__/
-instance/
-*.sqlite3
-*.pyc
-chrome-extension/*.zip
-.env
-.venv/
-__pycache__/
-instance/
-*.sqlite3
-*.pyc
-chrome-extension/*.zip
-.env
-.venv/
-__pycache__/
-instance/
-*.sqlite3
-*.pyc
-chrome-extension/*.zip
-.env
-.env
-.env
+# ---- Training data (keep out of git) ----
+data/
+*.csv
+*.tsv
+*.parquet
+*.feather
+*.jsonl
+!data/sample_small.csv
+
+# ---- Model artifacts: ignore blobs by default...
+*.joblib
+*.pkl
+*.sav
+# ...but allow the specific artifacts we ship with the API:
+!app/predictions/artifacts/
+!app/predictions/artifacts/rf_phi.pkl
+!app/predictions/artifacts/imputer_phi.pkl
+!app/predictions/artifacts/feature_order.json
+!app/predictions/artifacts/tld_freq.json
+# (If you later add threshold.json, also unignore it:)
+# !app/predictions/artifacts/threshold.json
+
+# ---- Ignore the extension folder in this repo (API-only push) ----
+phishguard_chrome_extension_v2/
+!app/predictions/artifacts/phish_rf.joblib
+!app/predictions/artifacts/imputer_phi.joblib
+!app/predictions/artifacts/feature_order.json
+!app/predictions/artifacts/threshold.json
+!app/predictions/artifacts/tld_freq.json
+
+app/predictions/artifacts/*.pkl
+
+app/predictions/artifacts/*.jolib

@@ -1,15 +1,126 @@
 {% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+
 {% block content %}
-<div class="card">
-  <div class="card-body">
-    <h3 class="card-title">Dashboard</h3>
-    {% if not user.is_confirmed %}
-      <div class="alert alert-warning">
-        Your email is not confirmed. 
-        <a href="{{ url_for('auth.resend_confirmation') }}">Resend confirmation email</a>.
+{# Make the template robust if the view forgets to pass context #}
+{% set s = stats if stats is defined and stats else {} %}
+{% set items = recent if recent is defined and recent else [] %}
+
+<div class="container">
+  <!-- Welcome -->
+  <div class="row mb-4">
+    <div class="col">
+      <h2 class="fw-bold">Welcome back, {{ (current_user.username or current_user.email) if current_user else 'User' }}!</h2>
+      <p class="text-muted mb-0">Here’s your PhishGuard protection overview</p>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-muted mb-2">Total Scans</h6>
+            <h3 class="mb-0">{{ s.total_scans | default(0) }}</h3>
+          </div>
+          <div class="bg-primary bg-opacity-10 p-3 rounded">
+            <i class="fas fa-search text-primary"></i>
+          </div>
+        </div>
       </div>
-    {% endif %}
-    <p class="mb-0">You're logged in as <strong>{{ user.email }}</strong>.</p>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-muted mb-2">Threats Detected</h6>
+            {# use phish_total if provided; else 0 #}
+            <h3 class="mb-0">{{ s.phish_total | default(s.threats_detected | default(0)) }}</h3>
+          </div>
+          <div class="bg-danger bg-opacity-10 p-3 rounded">
+            <i class="fas fa-shield-alt text-danger"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-muted mb-2">Safe Sites</h6>
+            {# safe = total - threats (fallback to provided safe_sites or 0) #}
+            {% set total = s.total_scans | default(0) %}
+            {% set threats = s.phish_total | default(s.threats_detected | default(0)) %}
+            <h3 class="mb-0">{{ (total - threats) if total >= threats else (s.safe_sites | default(0)) }}</h3>
+          </div>
+          <div class="bg-success bg-opacity-10 p-3 rounded">
+            <i class="fas fa-check-circle text-success"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="card-title mb-0">Recent Activity</h5>
+        {% if s.scans_24h is defined %}
+          <span class="text-muted small">Last 24h: {{ s.scans_24h }}</span>
+        {% endif %}
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th style="min-width: 42%">URL</th>
+              <th style="min-width: 120px">Status</th>
+              <th style="min-width: 180px">Date</th>
+              <th style="min-width: 100px">Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in items %}
+              <tr>
+                <td class="text-truncate" style="max-width: 520px;">
+                  <a href="{{ r.url }}" target="_blank" rel="noreferrer">{{ r.url }}</a>
+                </td>
+                <td>
+                  {% set is_phish = (r.label or '') | lower == 'phish' %}
+                  {% if is_phish %}
+                    <span class="badge bg-danger">Dangerous</span>
+                  {% else %}
+                    <span class="badge bg-success">Safe</span>
+                  {% endif %}
+                </td>
+                <td class="text-nowrap">
+                  {# Prefer evaluated_at, else created_at; print ISO if no formatter #}
+                  {{ (r.evaluated_at or r.created_at) or '—' }}
+                </td>
+                <td>
+                  {% if r.score is not none %}
+                    {{ '%.3f'|format(r.score) }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="4" class="text-muted text-center py-4">
+                  No activity yet. Use the Chrome extension to scan pages and links.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
